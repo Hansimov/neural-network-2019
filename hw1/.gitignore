@@ -1,2 +1,3 @@
 data/*
-dataX/*
+data_processed/*
+data_renamed/*

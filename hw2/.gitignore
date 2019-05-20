@@ -1,3 +1,8 @@
 data/*
 data_processed/*
 data_renamed/*
+fashion/*
+*.gz
+*.bmp
+*.png
+*.jpg

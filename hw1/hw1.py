@@ -38,8 +38,8 @@ def sharpImages():
         # res = tmp
         # tmp = cv2.imread(src+filename)
         # res = cv2.cvtColor(tmp, cv2.COLOR_BGR2GRAY)
-        # res = cv2.Sobel(tmp, cv2.CV_64F,1,1, ksize=5)
-        res = cv2.Laplacian(tmp,cv2.CV_64F,ksize=5)
+        res = cv2.Sobel(tmp, cv2.CV_64F,1,1, ksize=5)
+        # res = cv2.Laplacian(tmp,cv2.CV_64F,ksize=5)
         # res = cv2.Scharr(tmp,cv2.CV_64F,1,0)
         imgs.append([res,filename])
         cv2.imwrite(tgt+filename,res)
@@ -120,10 +120,9 @@ def clusterImages(k):
     for i in range(0,k):
         centers.append(mv[clusters[i][0]])
 
-    #$ Clustering
+    ## Clustering
     isClustered = False
     epoch = 0
-    # while (not isClustered) and (epoch<10):
     while not isClustered:
         if epoch==0:
             pass
@@ -159,11 +158,8 @@ def clusterImages(k):
                     centerTmp = centerTmp + mv[idx]
                 centers[i] = centerTmp/len(clusters[i])
                 isClustered = isClustered and (centers[i][0]==centersOld[i][0]) and (centers[i][1]==centersOld[i][1])
-            print(centers[0],centersOld[0],isClustered)
+            print(isClustered, list(map(lambda i: (round(centers[i][0],3),round(centers[i][1],3)), [0,1,2,3])))
             centersOld = centers.copy()
-
-    # print(sum(list(map(lambda x: len(clusters[x]), [0,1,2,3]))))
-    # print(list(map(lambda x: len(clusters[x]), [0,1,2,3])))
 
     plt.figure(1)
     for i in range(len(clusters)):

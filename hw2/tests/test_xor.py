@@ -18,7 +18,7 @@ train_data = np.array([
     [1,1]
 ])
 train_label = np.array([
-    0,0,1,0
+    0,1,1,0
 ])
 
 def calcInitWeightRange(node_nums):
@@ -95,7 +95,7 @@ def calcOutput(vin,target):
 # 每次从训练数据中取出一个样本的输入向量，使用感知器计算其输出，再根据上面的规则来调整权重。
 # 每处理一个样本就调整一次权重。
 # 经过多轮迭代后（即全部的训练数据被反复处理多轮），就可以训练出感知器的权重，使之实现目标函数。
-for i in range(epochs):
+for h in range(epochs):
     for i in range(train_data.shape[0]):
         vin = train_data[i]
         target = train_label[i]

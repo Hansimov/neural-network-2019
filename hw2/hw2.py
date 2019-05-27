@@ -6,6 +6,7 @@ import random
 from shutil import copyfile
 import pickle
 import math
+import time
 
 data_original = "data/"
 data_renamed = "data_renamed/"
@@ -13,7 +14,6 @@ data_processed = "data_processed/"
 imgxs_labels = "imgxs_labels.pkl"
 
 def renameFiles():
-    # print(">>> Renaming files ...")
     if not os.path.exists(data_renamed): 
         os.mkdir(data_renamed)
     for filename in os.listdir(data_original):
@@ -38,64 +38,59 @@ def onehot(idx,len):
     return tmp
 
 imgx_size = (10,10)
+imgx_len = imgx_size[0] * imgx_size[1]
 label_size = 4
 def processFiles():
-    # print(">>> Processing files ...")
+    # Resize images
     if not os.path.exists(data_processed): 
         os.mkdir(data_processed)
-    cnt = 0
-    # for filename in os.listdir(data_renamed):
-    #     if cnt == 1:
-    #         break
-    #     cnt += 1
-        # img = cv2.imread(data_renamed+filename,0)
-        # number range: [0,255]
+    for filename in os.listdir(data_renamed):
+        img = cv2.imread(data_renamed+filename,0)
         # print(filename,img.shape, np.amax(img), np.amin(img))
-        # imgx = cv2.resize(img,imgx_size)
-        # body, ext = os.path.splitext(filename)
-        # cv2.imwrite(data_processed+body+"_x"+ext,imgx)
+        imgx = cv2.resize(img,imgx_size)
+        body, ext = os.path.splitext(filename)
+        cv2.imwrite(data_processed+body+"_x"+ext,imgx)
+
+def dumpFiles():
+    # Dump variables to files
     cnt = 0
     imgxs = []
     labels = []
     targets = []
+    names = []
     for filename in os.listdir(data_processed):
-        # if cnt == 1:
-        #     break
-        # cnt += 1 
         # print(filename)
-        imgx = cv2.imread(data_processed+filename,0)
+        names.append(filename)
+        imgx = cv2.imread(data_processed+filename,0)/255
         imgxs.append(imgx.flatten())
-        labels.append(filename[0])
-        targets.append(onehot(ord(filename[0])-ord("A"),label_size))
+        label = ord(filename[0])-ord("A")
+        labels.append(label)
+        targets.append(onehot(label,label_size))
         # print(np.amax(imgx),np.amin(imgx))
         # print(imgx)
-        
-    with open(imgxs_labels, "wb") as wf:
-        pickle.dump([imgxs,labels,targets], wf)
-        # with open('imgdata.pkl', 'rb') as f:
-        #     imgx = pickle.load(f)
-            # print(imgx)
 
-def calcInitWeightRange(node_nums):
-    return math.sqrt(node_nums[0]+node_nums[1])
+    with open(imgxs_labels, "wb") as wf:
+        pickle.dump([names,imgxs,labels,targets], wf)
+
 def sigmoid(x):
     return 1 / (1+math.exp(-x))
 
 weights = []
 biases = []
-step = 1
-node_nums = [imgx_size[0]*imgx_size[1], 10, label_size]
-epochs = 100
+# node_nums = [imgx_len, int(math.sqrt(imgx_len)), label_size]
+node_nums = [imgx_len, 3, label_size]
+epochs = 1000
 layer_num = len(node_nums)
-wran = calcInitWeightRange(node_nums)
+step = 0.1
+wran = step
 
 def trainNetwork():
     global weights, biases
 
     # Load imgxs and labels
     with open(imgxs_labels, "rb") as rf:
-        imgxs,labels,targets = pickle.load(rf)
-    # print(imgxs,labels)
+        names,imgxs,labels,targets = pickle.load(rf)
+    # print(imgxs,labels,targets)
 
     # Initialize weights and biases
     for i in range(layer_num-1):
@@ -104,11 +99,17 @@ def trainNetwork():
 
     # train through all samples
     for h in range(epochs):
+        tic = time.time()
+        total_count = len(imgxs)
+        wrong_count = 0
         for i in range(len(imgxs)):
-            print("Epoch:{} Image:{:>4} Label:{} Target:{}".format(h,i,labels[i], targets[i]))
-            trainSingleSample(imgxs[i], targets[i])
+            # print("Epoch:{} Image:{:>4} Label:{} Target:{}".format(h,i,labels[i], targets[i]))
+            is_wrong = trainSingleSample(names[i],imgxs[i], targets[i], labels[i])
+            wrong_count += is_wrong
+        toc = time.time()
+        print("Epoch:{} == Time: {} s == Accuracy:{}/{}={}%".format(h,round(toc-tic,2),total_count-wrong_count,total_count,round(100*(1-wrong_count/total_count),2)))
 
-def trainSingleSample(vin, target):
+def trainSingleSample(name, imgx, target, label):
     global weights, biases
     # Initialize nodes vales
     nodes = []
@@ -116,7 +117,7 @@ def trainSingleSample(vin, target):
     for i in range(layer_num):
         nodes.append(np.zeros(node_nums[i]))
         deltas.append(np.zeros(node_nums[i]))
-    nodes[0] = vin
+    nodes[0] = imgx
 
     # forward propagation
     for i in range(layer_num-1):
@@ -124,9 +125,7 @@ def trainSingleSample(vin, target):
             for j in range(node_nums[i]):
                 nodes[i+1][k] += nodes[i][j] * weights[i][j,k]
             nodes[i+1][k] += biases[i][k]
-            nodes[i+1][k] = sigmoid(nodes[i+1][k]/255)
-
-    print(nodes[-1])
+            nodes[i+1][k] = sigmoid(nodes[i+1][k])
 
     # calculate deltas
     for i in range(layer_num)[::-1]:
@@ -147,9 +146,16 @@ def trainSingleSample(vin, target):
                 weights[i][j,k] += step * deltas[i+1][k] * nodes[i][j]
             biases[i][k] += step * deltas[i+1][k]
 
-    print(nodes[-1])
+    # print(nodes[-1], np.argmax(nodes[-1]))
+    if np.argmax(nodes[-1]) == label:
+        is_wrong = 0
+    else:
+        is_wrong = 1
+        # print(name)
+    return is_wrong
 
 if __name__ == '__main__':
     # renameFiles()
     # processFiles()
+    # dumpFiles()
     trainNetwork()

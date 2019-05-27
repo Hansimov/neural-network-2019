@@ -22,7 +22,7 @@ train_label = np.array([
 ])
 
 def calcInitWeightRange(node_nums):
-    return math.sqrt(node_nums[0]+node_nums[1])
+    return math.sqrt(node_nums[0]+node_nums[-1])
 step = 1
 node_nums = [2,5,1]
 epochs = 1000

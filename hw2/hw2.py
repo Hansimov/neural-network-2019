@@ -40,6 +40,13 @@ def onehot(idx,len):
 imgx_size = (10,10)
 imgx_len = imgx_size[0] * imgx_size[1]
 label_size = 4
+# node_nums = [imgx_len, int(math.sqrt(imgx_len)), label_size]
+node_nums = [imgx_len, 4, label_size]
+layer_num = len(node_nums)
+epochs = 100
+step = 0.1
+wran = step
+
 def processFiles():
     # Resize images
     if not os.path.exists(data_processed): 
@@ -77,12 +84,6 @@ def sigmoid(x):
 
 weights = []
 biases = []
-# node_nums = [imgx_len, int(math.sqrt(imgx_len)), label_size]
-node_nums = [imgx_len, 3, label_size]
-epochs = 1000
-layer_num = len(node_nums)
-step = 0.1
-wran = step
 
 def trainNetwork():
     global weights, biases

@@ -41,9 +41,9 @@ imgx_size = (10,10)
 imgx_len = imgx_size[0] * imgx_size[1]
 label_size = 4
 # node_nums = [imgx_len, int(math.sqrt(imgx_len)), label_size]
-node_nums = [imgx_len, 4, label_size]
+node_nums = [imgx_len, 5, label_size]
 layer_num = len(node_nums)
-epochs = 100
+epochs = 50
 step = 0.1
 wran = step
 
@@ -79,8 +79,9 @@ def dumpFiles():
     with open(imgxs_labels, "wb") as wf:
         pickle.dump([names,imgxs,labels,targets], wf)
 
-def sigmoid(x):
+def nsigmoid(x):
     return 1 / (1+math.exp(-x))
+sigmoid = np.vectorize(nsigmoid)
 
 weights = []
 biases = []
@@ -96,7 +97,7 @@ def trainNetwork():
     # Initialize weights and biases
     for i in range(layer_num-1):
         weights.append(np.random.rand(node_nums[i],node_nums[i+1]) * wran)
-        biases.append(np.zeros(node_nums[i+1]))
+        biases.append(np.zeros((1,node_nums[i+1])))
 
     # train through all samples
     for h in range(epochs):
@@ -108,7 +109,7 @@ def trainNetwork():
             is_wrong = trainSingleSample(names[i],imgxs[i], targets[i], labels[i])
             wrong_count += is_wrong
         toc = time.time()
-        print("Epoch:{} == Time: {} s == Accuracy:{}/{}={}%".format(h,round(toc-tic,2),total_count-wrong_count,total_count,round(100*(1-wrong_count/total_count),2)))
+        print("Epoch:{} == Time: {} s == Accuracy:{}/{}={}%".format(h,round(toc-tic,3),total_count-wrong_count,total_count,round(100*(1-wrong_count/total_count),2)))
 
 def trainSingleSample(name, imgx, target, label):
     global weights, biases
@@ -116,36 +117,52 @@ def trainSingleSample(name, imgx, target, label):
     nodes = []
     deltas = []
     for i in range(layer_num):
-        nodes.append(np.zeros(node_nums[i]))
-        deltas.append(np.zeros(node_nums[i]))
-    nodes[0] = imgx
+        nodes.append(np.zeros((1,node_nums[i])))
+        deltas.append(np.zeros((1,node_nums[i])))
+    nodes[0] = imgx[np.newaxis]
 
     # forward propagation
     for i in range(layer_num-1):
-        for k in range(node_nums[i+1]):
-            for j in range(node_nums[i]):
-                nodes[i+1][k] += nodes[i][j] * weights[i][j,k]
-            nodes[i+1][k] += biases[i][k]
-            nodes[i+1][k] = sigmoid(nodes[i+1][k])
+        # for k in range(node_nums[i+1]):
+            # for j in range(node_nums[i]):
+            #     nodes[i+1][k] += nodes[i][j] * weights[i][j,k]
+            # nodes[i+1][0,k] = np.dot(nodes[i],weights[i][:,k]) + biases[i][0,k]
+            # nodes[i+1][0,k] = sigmoid(nodes[i+1][0,k])
+        # nodes[i+1] = np.dot(nodes[i],weights[i][:,:]) + biases[i]
 
+        nodes[i+1] = np.matmul(nodes[i], weights[i]) + biases[i]
+        nodes[i+1] = sigmoid(nodes[i+1])
+
+    target = target[np.newaxis]
     # calculate deltas
     for i in range(layer_num)[::-1]:
-        for j in range(node_nums[i]):
-            ytmp = nodes[i][j]
-            if i == layer_num-1: # ouput layer
-                deltas[i][j] = ytmp * (1-ytmp) * (target[j]-ytmp)
-            else: # hidden layers
-                dtmp = 0
-                for k in range(node_nums[i+1]):
-                    dtmp += deltas[i+1][k] * weights[i][j,k]
-                deltas[i][j] = ytmp * (1-ytmp) * dtmp
+        if i == layer_num-1: # ouput layer
+            deltas[i] = nodes[i]*(1-nodes[i])*(target-nodes[i])
+        else: # hidden layer
+            dtmp = np.matmul(weights[i],deltas[i+1].T)
+            deltas[i] = nodes[i]*(1-nodes[i])*(dtmp.T)
+
+        # for j in range(node_nums[i]):
+        #     ytmp = nodes[i][0,j]
+        #     # print(nodes[i].shape)
+        #     if i == layer_num-1: # ouput layer
+        #         deltas[i][0,j] = ytmp * (1-ytmp) * (target[j]-ytmp)
+        #     else: # hidden layers
+        #         # dtmp = 0
+        #         # for k in range(node_nums[i+1]):
+        #         #     dtmp += deltas[i+1][k] * weights[i][j,k]
+        #         dtmp = np.dot(deltas[i+1], weights[i][j,:])
+        #         deltas[i][0,j] = ytmp * (1-ytmp) * dtmp
 
     # update weights
     for i in range(layer_num-1):
-        for k in range(node_nums[i+1]):
-            for j in range(node_nums[i]):
-                weights[i][j,k] += step * deltas[i+1][k] * nodes[i][j]
-            biases[i][k] += step * deltas[i+1][k]
+        # for k in range(node_nums[i+1]):
+        #     # for j in range(node_nums[i]):
+        #     #     weights[i][j,k] += step * deltas[i+1][k] * nodes[i][j]
+        #     weights[i][:,k] += step * np.dot(deltas[i+1][k], nodes[i])
+        #     # biases[i][k] += step * deltas[i+1][k]
+        weights[i] += step * np.matmul(nodes[i].T, deltas[i+1])
+        biases[i] += step * deltas[i+1]
 
     # print(nodes[-1], np.argmax(nodes[-1]))
     if np.argmax(nodes[-1]) == label:

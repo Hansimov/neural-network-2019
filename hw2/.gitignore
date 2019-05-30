@@ -5,6 +5,3 @@ data_train/*
 data_test/*
 fashion/*
 *.gz
-*.bmp
-*.png
-*.jpg

@@ -130,7 +130,7 @@ biases = []
 def trainNetwork():
     global weights, biases
 
-    # load imgxs and labels
+    # load train data
     with open(dumped_train_data, "rb") as rf:
         names,imgxs,labels,targets = pickle.load(rf)
     # print(imgxs,labels,targets)

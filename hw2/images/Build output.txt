@@ -98,5 +98,9 @@ Epoch:96 == Time: 0.101 s == Accuracy:1664/1664=100.0%
 Epoch:97 == Time: 0.104 s == Accuracy:1664/1664=100.0%
 Epoch:98 == Time: 0.102 s == Accuracy:1664/1664=100.0%
 Epoch:99 == Time: 0.104 s == Accuracy:1664/1664=100.0%
-Time: 0.015 s -- Accuracy:292/292=100.0%
+
+Time: 0.015 s
+
+Accuracy: 292/292=100.0%
+
 [Finished in 33.1s]
